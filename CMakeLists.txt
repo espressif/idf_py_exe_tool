@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.5)
+cmake_minimum_required(VERSION 3.17)
 project(idfexe)
 
 set(VERSION 1.0.2)
@@ -9,7 +9,9 @@ target_compile_definitions(idf PRIVATE -DVERSION=\"${VERSION}\")
 set_target_properties(idf PROPERTIES C_STANDARD 99)
 target_link_libraries(idf "shlwapi")
 
-if(CMAKE_BUILD_TYPE STREQUAL Release)
+set_property(TARGET idf PROPERTY MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+
+if(CMAKE_BUILD_TYPE STREQUAL Release AND CMAKE_STRIP)
     add_custom_command(TARGET idf
                         POST_BUILD
                         COMMAND ${CMAKE_STRIP} idf.exe)
