@@ -1,8 +1,15 @@
 cmake_minimum_required(VERSION 3.17)
 project(idfexe)
 
-set(VERSION 1.0.2)
-set(ARCHIVE_NAME idf-exe-v${VERSION}.zip)
+execute_process(COMMAND git describe --always --abbrev=8
+                OUTPUT_VARIABLE VERSION
+                ERROR_QUIET)
+string(STRIP "${VERSION}" VERSION)
+if(NOT VERSION)
+    message(FATAL_ERROR "Failed to determine version from git")    
+endif()
+
+set(ARCHIVE_NAME idf-exe-${VERSION}.zip)
 
 add_executable(idf idf_main.c)
 target_compile_definitions(idf PRIVATE -DVERSION=\"${VERSION}\")
