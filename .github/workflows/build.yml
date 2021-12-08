@@ -1,0 +1,53 @@
+name: build
+
+on: [push, pull_request]
+
+jobs:
+  build-dist:
+    name: Build distribution archive
+    runs-on: windows-2019
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+      - uses: ilammy/msvc-dev-cmd@v1.10.0
+      - name: build and package
+        run: |
+          git fetch --tags --force
+          mkdir build
+          cd build
+          cmake -DCMAKE_BUILD_TYPE=Release -G "NMake Makefiles" ..
+          cmake --build .
+          $distfile = (Get-ChildItem -Path . -Filter "idf-exe-*.zip").Name
+          echo "DISTFILE=$distfile" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+      - uses: actions/upload-artifact@v2
+        with:
+          path: build/${{ env.DISTFILE }}
+          name: ${{ env.DISTFILE }}
+
+  create-release:
+    name: Create release
+    runs-on: ubuntu-latest
+    needs: [build-dist]
+    if: startsWith(github.ref, 'refs/tags/')
+    env:
+      DISTFILE: idf-exe-${{ github.ref_name }}.zip
+    steps:
+      - name: Download distribution archive
+        id: download
+        uses: actions/download-artifact@v2
+        with:
+          name: ${{ env.DISTFILE }}
+          path: dist/
+      - name: Generate SHA256
+        run: |
+          cd ${{steps.download.outputs.download-path}}
+          sha256sum ${{env.DISTFILE}} | tee ${{env.DISTFILE}}.sha256
+      - name: Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            ${{steps.download.outputs.download-path}}/${{env.DISTFILE}}
+            ${{steps.download.outputs.download-path}}/${{env.DISTFILE}}.sha256
+          draft: true
+          generate_release_notes: true
